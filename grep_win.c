@@ -551,11 +551,11 @@ int match_line(Options *opts, const char *line) {
     }
 }
 
-void process_file(const char *filename, Options *opts, int num_files, int print_filename) {
+int process_file(const char *filename, Options *opts, int num_files, int print_filename) {
     FILE *fp = fopen(filename, "r");
     if (!fp) {
-        if (!opts->no_messages) perror(filename);
-        return;
+        if (!opts->no_messages && errno != 0) perror(filename);
+        return 0;
     }
 
     // Collect all lines
@@ -623,6 +623,7 @@ void process_file(const char *filename, Options *opts, int num_files, int print_
 
     // Check if binary
     int is_binary = 0;
+    int found = 0;
     /*
     if (opts->binary_files_type == 0) {
         for (int i = 0; i < num_lines; i++) {
@@ -670,6 +671,7 @@ void process_file(const char *filename, Options *opts, int num_files, int print_
                 printf("%s", filename);
                 if (opts->null_output) printf("\0");
                 printf("\n");
+                found = 1;
             }
         }
     } else if (opts->files_without_match) {
@@ -678,6 +680,7 @@ void process_file(const char *filename, Options *opts, int num_files, int print_
                 printf("%s", filename);
                 if (opts->null_output) printf("\0");
                 printf("\n");
+                found = 1;
             }
         }
     } else if (opts->count) {
@@ -686,6 +689,7 @@ void process_file(const char *filename, Options *opts, int num_files, int print_
                 printf("%s:", filename);
             }
             printf("%d\n", match_count);
+            found = 1;
         }
     } else if (opts->only_matching) {
         if (!opts->quiet) {
@@ -726,6 +730,7 @@ void process_file(const char *filename, Options *opts, int num_files, int print_
                                 printf("%zu:", lines[i].byte_offset + start);
                             }
                             printf("%.*s\n", (int)(end - start), lines[i].text + start);
+                            found = 1;
                             offset = end;
                             if (offset >= lines[i].len) break;
                         }
@@ -799,6 +804,7 @@ void process_file(const char *filename, Options *opts, int num_files, int print_
                         printf("\33[0m");
                     }
                     printf("\n");
+                    found = 1;
                 }
                 printed_count++;
             } else {
@@ -813,17 +819,19 @@ void process_file(const char *filename, Options *opts, int num_files, int print_
         free(lines[i].text);
     }
     free(lines);
+    return found;
 }
 
-void process_directory(const char *dirname, Options *opts, int num_files, int print_filename) {
+int process_directory(const char *dirname, Options *opts, int num_files, int print_filename) {
     char path[1024];
     sprintf(path, "%s\\*", dirname);
 
     struct _finddata_t finddata;
+    int found = 0;
     intptr_t handle = _findfirst(path, &finddata);
     if (handle == -1) {
-        perror(dirname);
-        return;
+        if (errno != 0) perror(dirname);
+        return 0;
     }
 
     do {
@@ -835,7 +843,7 @@ void process_directory(const char *dirname, Options *opts, int num_files, int pr
             int include_dir = 1;
             if (opts->exclude_dir && match_glob(opts->exclude_dir, finddata.name)) include_dir = 0;
             if (include_dir && opts->recursive) {
-                process_directory(path, opts, num_files, print_filename);
+                found |= process_directory(path, opts, num_files, print_filename);
             }
         } else {
             int include = 1;
@@ -856,15 +864,16 @@ void process_directory(const char *dirname, Options *opts, int num_files, int pr
                 }
             }
             if (include) {
-                process_file(path, opts, num_files, print_filename);
+                found |= process_file(path, opts, num_files, print_filename);
             }
         }
     } while (_findnext(handle, &finddata) == 0);
 
     _findclose(handle);
+    return found;
 }
 
-void process_input(Options *opts, int num_files) {
+int process_input(Options *opts, int num_files) {
     if (opts->before_context || opts->after_context) {
         fprintf(stderr, "grep: context not supported with stdin\n");
         opts->before_context = opts->after_context = 0;
@@ -872,6 +881,7 @@ void process_input(Options *opts, int num_files) {
 
     int line_num = 0;
     int match_count = 0;
+    int found = 0;
 
     if (opts->null_data) {
         // Read all stdin, split by \0
@@ -880,7 +890,7 @@ void process_input(Options *opts, int num_files) {
         char *buffer = malloc(capacity);
         if (!buffer) {
             perror("malloc");
-            return;
+            return 0;
         }
         int c;
         while ((c = getchar()) != EOF) {
@@ -976,27 +986,29 @@ int main(int argc, char *argv[]) {
     int num_files = argc - i;
     int print_filename = (num_files > 1 && !opts.no_filename) || opts.with_filename;
 
+    int any_matches = 0;
+
     if (num_files == 0) {
-        process_input(&opts, num_files);
+        any_matches = process_input(&opts, num_files);
     } else {
         for (int j = i; j < argc; j++) {
             const char *path = argv[j];
             DWORD attrib = GetFileAttributes(path);
             if (attrib == INVALID_FILE_ATTRIBUTES) {
-                perror(path);
+                if (errno != 0) perror(path);
                 continue;
             }
             if (attrib & FILE_ATTRIBUTE_DIRECTORY) {
                 if (opts.recursive) {
-                    process_directory(path, &opts, num_files, print_filename);
+                    any_matches |= process_directory(path, &opts, num_files, print_filename);
                 } else {
                     fprintf(stderr, "grep: %s: Is a directory\n", path);
                 }
             } else {
-                process_file(path, &opts, num_files, print_filename);
+                any_matches |= process_file(path, &opts, num_files, print_filename);
             }
         }
     }
 
-    return 0;
+    return any_matches ? 0 : 1;
 }
