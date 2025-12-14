@@ -23,11 +23,15 @@ jobs:
     - name: Test
       shell: msys2 {0}
       run: ./grep.exe --version
+    - name: Get Version
+      id: version
+      shell: msys2 {0}
+      run: echo "version=$(./grep.exe --version | head -1 | cut -d' ' -f4)" >> $GITHUB_OUTPUT
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ github.run_number }}
-        name: grep v3.11
+        name: grep v${{ steps.version.outputs.version }}
         files: grep.exe
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
