@@ -573,7 +573,7 @@ int process_file(const char *filename, Options *opts, int num_files, int print_f
         if (!buffer) {
             perror("malloc");
             fclose(fp);
-            return;
+            return 0;
         }
         size_t read_size = fread(buffer, 1, file_size, fp);
         buffer[read_size] = '\0';
@@ -642,7 +642,7 @@ int process_file(const char *filename, Options *opts, int num_files, int print_f
         if (!opts->quiet) fprintf(stderr, "Binary file %s matches\n", filename);
         for (int i = 0; i < num_lines; i++) free(lines[i].text);
         free(lines);
-        return;
+        return found;
     }
 
     // Find matches
@@ -899,7 +899,7 @@ int process_input(Options *opts, int num_files) {
                 buffer = realloc(buffer, capacity);
                 if (!buffer) {
                     perror("realloc");
-                    return;
+                    return 0;
                 }
             }
             buffer[size++] = c;
