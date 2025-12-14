@@ -36,6 +36,8 @@ jobs:
         tag_name: v${{ steps.version.outputs.version }}-${{ github.run_number }}
         name: grep v${{ steps.version.outputs.version }}
         body: ${{ github.event.head_commit.message }}
-        files: grep.exe libpcre2-8-0.dll
+        files: |
+          grep.exe
+          libpcre2-8-0.dll
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
