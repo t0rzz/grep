@@ -994,7 +994,7 @@ int main(int argc, char *argv[]) {
     }
 
     int num_files = argc - argi;
-    int print_filename = (num_files > 1 && !opts.no_filename) || opts.with_filename;
+    int print_filename = ((num_files > 1 || opts.recursive) && !opts.no_filename) || opts.with_filename;
 
     int any_matches = 0;
 
