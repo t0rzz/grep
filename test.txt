@@ -1,0 +1,5 @@
+This is a test file.
+It contains a line with * in it.
+Also a line with . here.
+Another line without special chars.
+End of file.

@@ -177,7 +177,7 @@ void print_usage() {
     printf("General help using GNU software: <https://www.gnu.org/gethelp/>\n");
 }
 
-int parse_options(int argc, char *argv[], Options *opts) {
+int parse_options(int argc, char *argv[], Options *opts, int *argi) {
     opts->ignore_case = 0;
     opts->invert_match = 0;
     opts->line_number = 0;
@@ -220,7 +220,7 @@ int parse_options(int argc, char *argv[], Options *opts) {
     opts->color_when = 2; // auto
     opts->code = NULL;
 
-    int i = 1;
+    int i = *argi;
     while (i < argc) {
         if (argv[i][0] == '-') {
             if (strcmp(argv[i], "-i") == 0) {
@@ -494,6 +494,7 @@ int parse_options(int argc, char *argv[], Options *opts) {
         if (mod_pat) free(mod_pat);
     }
 
+    *argi = i;
     return 0;
 }
 
@@ -978,19 +979,21 @@ int main(int argc, char *argv[]) {
     }
 
     Options opts;
-    if (parse_options(argc, argv, &opts)) {
+    int argi = 1;
+    if (parse_options(argc, argv, &opts, &argi)) {
         return 1;
     }
 
-    int i = 1;
-    while (i < argc) {
-        if (argv[i][0] != '-') break;
-        if (strcmp(argv[i], "-e") == 0 || strcmp(argv[i], "-f") == 0) i += 2;
-        else i++;
+    if (opts.num_patterns == 0 && opts.pattern_file == NULL) {
+        if (argi >= argc) {
+            print_usage();
+            return 1;
+        }
+        opts.patterns[opts.num_patterns++] = argv[argi];
+        argi++;
     }
-    if (opts.num_patterns == 0 || (opts.pattern_file == NULL && opts.num_patterns == 1)) i++;
 
-    int num_files = argc - i;
+    int num_files = argc - argi;
     int print_filename = (num_files > 1 && !opts.no_filename) || opts.with_filename;
 
     int any_matches = 0;
@@ -998,7 +1001,7 @@ int main(int argc, char *argv[]) {
     if (num_files == 0) {
         any_matches = process_input(&opts, num_files);
     } else {
-        for (int j = i; j < argc; j++) {
+        for (int j = argi; j < argc; j++) {
             const char *path = argv[j];
             DWORD attrib = GetFileAttributes(path);
             if (attrib == INVALID_FILE_ATTRIBUTES) {
