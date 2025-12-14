@@ -7,6 +7,7 @@
 #include <direct.h>
 #include <stdint.h>
 #define PCRE2_CODE_UNIT_WIDTH 8
+#define PCRE2_STATIC
 #include <pcre2.h>
 
 int match_glob(const char *pattern, const char *string) {
