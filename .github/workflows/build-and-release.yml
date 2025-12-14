@@ -19,7 +19,10 @@ jobs:
         install: mingw-w64-x86_64-gcc mingw-w64-x86_64-pcre2
     - name: Compile
       shell: msys2 {0}
-      run: gcc -o grep.exe grep_win.c -static -lpcre2-8
+      run: gcc -o grep.exe grep_win.c -lpcre2-8
+    - name: Copy DLL
+      shell: msys2 {0}
+      run: cp /mingw64/bin/libpcre2-8-0.dll .
     - name: Test
       shell: msys2 {0}
       run: ./grep.exe --version
@@ -33,6 +36,6 @@ jobs:
         tag_name: v${{ steps.version.outputs.version }}-${{ github.run_number }}
         name: grep v${{ steps.version.outputs.version }}
         body: ${{ github.event.head_commit.message }}
-        files: grep.exe
+        files: grep.exe libpcre2-8-0.dll
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
