@@ -19,7 +19,7 @@ jobs:
         install: mingw-w64-x86_64-gcc mingw-w64-x86_64-pcre2
     - name: Compile
       shell: msys2 {0}
-      run: gcc -o grep.exe grep_win.c -lpcre2-8
+      run: gcc -o grep.exe grep_win.c -static -lpcre2-8
     - name: Test
       shell: msys2 {0}
       run: ./grep.exe --version
