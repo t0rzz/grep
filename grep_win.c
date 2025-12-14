@@ -454,7 +454,9 @@ int parse_options(int argc, char *argv[], Options *opts) {
         char line[MAX_LINE];
         while (fgets(line, sizeof(line), fp)) {
             size_t len = strlen(line);
-            if (len > 0 && line[len-1] == '\n') line[len-1] = '\0';
+            while (len > 0 && (line[len-1] == '\n' || line[len-1] == '\r')) {
+                line[--len] = '\0';
+            }
             if (opts->num_patterns < MAX_PATTERNS) {
                 opts->patterns[opts->num_patterns++] = strdup(line);
             }
@@ -609,7 +611,9 @@ int process_file(const char *filename, Options *opts, int num_files, int print_f
                 lines = realloc(lines, capacity * sizeof(Line));
             }
             size_t len = strlen(line_buf);
-            if (len > 0 && line_buf[len-1] == '\n') line_buf[len-1] = '\0';
+            while (len > 0 && (line_buf[len-1] == '\n' || line_buf[len-1] == '\r')) {
+                line_buf[--len] = '\0';
+            }
             lines[num_lines].text = strdup(line_buf);
             lines[num_lines].len = len;
             lines[num_lines].is_match = 0;
@@ -855,7 +859,7 @@ int process_directory(const char *dirname, Options *opts, int num_files, int pri
                 if (ef) {
                     char buf[256];
                     while (fgets(buf, sizeof(buf), ef)) {
-                        buf[strcspn(buf, "\n")] = 0;
+                        buf[strcspn(buf, "\r\n")] = 0;
                         if (match_glob(buf, finddata.name)) {
                             include = 0;
                             break;
@@ -931,7 +935,9 @@ int process_input(Options *opts, int num_files) {
         while (fgets(line, sizeof(line), stdin)) {
             line_num++;
             size_t len = strlen(line);
-            if (len > 0 && line[len-1] == '\n') line[len-1] = '\0';
+            while (len > 0 && (line[len-1] == '\n' || line[len-1] == '\r')) {
+                line[--len] = '\0';
+            }
 
             int matches = match_line(opts, line);
             if (matches) {
